@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
 class StreamingEngine {
 
     private val udpClient = UdpStreamClient()
-    // TCP and WebSocket can be added here following the same pattern
+    private val tcpClient = TcpStreamClient()
+    private val wsClient = WebSocketStreamClient()
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -36,17 +37,15 @@ class StreamingEngine {
                 when (config.protocol) {
                     StreamProtocol.UDP -> {
                         udpClient.connect(config.targetIp, config.targetPort)
-                        udpClient.connectionState.collect { state ->
-                            _connectionState.value = state
-                        }
+                        udpClient.connectionState.collect { _connectionState.value = it }
                     }
                     StreamProtocol.TCP -> {
-                        // Implement TCP
-                        _connectionState.value = ConnectionState.Error("TCP not implemented yet")
+                        tcpClient.connect(config.targetIp, config.targetPort)
+                        tcpClient.connectionState.collect { _connectionState.value = it }
                     }
                     StreamProtocol.WEBSOCKET -> {
-                        // Implement WS
-                        _connectionState.value = ConnectionState.Error("WS not implemented yet")
+                        wsClient.connect(config.targetIp, config.targetPort)
+                        wsClient.connectionState.collect { _connectionState.value = it }
                     }
                 }
             } else {
@@ -60,6 +59,8 @@ class StreamingEngine {
         streamingJob?.cancel()
         streamingJob = null
         udpClient.disconnect()
+        tcpClient.disconnect()
+        wsClient.disconnect()
         _connectionState.value = ConnectionState.Disconnected
     }
 
@@ -72,14 +73,13 @@ class StreamingEngine {
         if (config.streamMode == StreamMode.NETWORK_ONLY || config.streamMode == StreamMode.NETWORK_AND_FILE) {
             when (config.protocol) {
                 StreamProtocol.UDP -> udpClient.send(payload)
-                StreamProtocol.TCP -> {} // TODO
-                StreamProtocol.WEBSOCKET -> {} // TODO
+                StreamProtocol.TCP -> tcpClient.send(payload)
+                StreamProtocol.WEBSOCKET -> wsClient.send(payload)
             }
         }
 
         if (config.streamMode == StreamMode.FILE_ONLY || config.streamMode == StreamMode.NETWORK_AND_FILE) {
-            // File logging logic is handled by the FileLogger (injected elsewhere)
-            // Just structural placeholder here
+            // File logging logic is handled by the FileLogger
         }
     }
 }

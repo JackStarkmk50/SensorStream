@@ -2,7 +2,8 @@ name: Build and Release APK
 
 on:
   release:
-    types: [created] # This triggers the workflow when you publish a new Release
+    types: [published]
+  workflow_dispatch: # Allows you to manually trigger the build from the Actions tab!
 
 jobs:
   build:

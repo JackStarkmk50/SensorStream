@@ -66,6 +66,9 @@ dependencies {
 
     // Location
     implementation(libs.play.services.location)
+    
+    // Networking
+    implementation(libs.okhttp)
 
     // Testing
     testImplementation(libs.junit)

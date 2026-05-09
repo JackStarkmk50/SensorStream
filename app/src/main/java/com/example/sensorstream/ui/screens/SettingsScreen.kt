@@ -39,13 +39,44 @@ fun SettingsScreen(viewModel: SensorStreamViewModel) {
         ) {
             Text("Network Configuration", style = MaterialTheme.typography.titleLarge)
             
+            var expanded by remember { mutableStateOf(false) }
+            
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    value = config.protocol.displayName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Protocol") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    com.example.sensorstream.data.model.StreamProtocol.values().forEach { protocol ->
+                        DropdownMenuItem(
+                            text = { Text(protocol.displayName) },
+                            onClick = {
+                                viewModel.updateConfig(config.copy(protocol = protocol))
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            
             OutlinedTextField(
                 value = ipAddress,
                 onValueChange = { 
                     ipAddress = it
                     viewModel.updateConfig(config.copy(targetIp = it))
                 },
-                label = { Text("Target IP Address") },
+                label = { Text("Target IP or URL (e.g. ws://ngrok.io)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
