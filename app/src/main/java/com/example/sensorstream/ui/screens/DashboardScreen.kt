@@ -18,6 +18,12 @@ import com.example.sensorstream.data.model.SensorType
 import com.example.sensorstream.ui.theme.*
 import com.example.sensorstream.ui.viewmodel.SensorStreamViewModel
 
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(viewModel: SensorStreamViewModel) {
@@ -25,6 +31,7 @@ fun DashboardScreen(viewModel: SensorStreamViewModel) {
     val snapshot by viewModel.currentSnapshot.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val config by viewModel.streamConfig.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     Scaffold(
         topBar = {
@@ -79,10 +86,32 @@ fun DashboardScreen(viewModel: SensorStreamViewModel) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Camera Preview (if enabled)
+            if (config.cameraEnabled) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkCard)
+                ) {
+                    AndroidView(
+                        factory = { context ->
+                            PreviewView(context).apply {
+                                scaleType = PreviewView.ScaleType.FILL_CENTER
+                                viewModel.bindCamera(lifecycleOwner, this)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Active Sensors List
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 val sortedSensors = snapshot.sensors.values.sortedBy { it.type.ordinal }
                 items(sortedSensors) { reading ->

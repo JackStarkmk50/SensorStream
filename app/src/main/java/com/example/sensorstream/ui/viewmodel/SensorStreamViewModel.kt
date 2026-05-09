@@ -57,6 +57,23 @@ class SensorStreamViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    private val cameraDataSource = com.example.sensorstream.data.sensor.CameraDataSource()
+
+    fun bindCamera(lifecycleOwner: androidx.lifecycle.LifecycleOwner, previewView: androidx.camera.view.PreviewView) {
+        cameraDataSource.startCamera(
+            getApplication(),
+            lifecycleOwner,
+            previewView,
+            _streamConfig.value
+        ) { jpegBytes ->
+            if (_isStreaming.value) {
+                viewModelScope.launch {
+                    streamingEngine.streamFrame(jpegBytes, _streamConfig.value)
+                }
+            }
+        }
+    }
+
     private fun startStreaming() {
         val config = _streamConfig.value
         sensorRepository.startCollecting(config)
@@ -82,5 +99,6 @@ class SensorStreamViewModel(application: Application) : AndroidViewModel(applica
     override fun onCleared() {
         super.onCleared()
         stopStreaming()
+        cameraDataSource.stopCamera()
     }
 }

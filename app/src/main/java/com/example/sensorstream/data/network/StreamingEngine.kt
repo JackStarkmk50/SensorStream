@@ -23,6 +23,11 @@ class StreamingEngine {
     private val tcpClient = TcpStreamClient()
     private val wsClient = WebSocketStreamClient()
 
+    // Dedicated clients for the heavy camera stream to prevent blocking IMU data
+    private val cameraUdpClient = UdpStreamClient()
+    private val cameraTcpClient = TcpStreamClient()
+    private val cameraWsClient = WebSocketStreamClient()
+
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
@@ -34,6 +39,7 @@ class StreamingEngine {
 
         streamingJob = scope.launch {
             if (config.streamMode == StreamMode.NETWORK_ONLY || config.streamMode == StreamMode.NETWORK_AND_FILE) {
+                // Connect IMU Clients
                 when (config.protocol) {
                     StreamProtocol.UDP -> {
                         udpClient.connect(config.targetIp, config.targetPort)
@@ -46,6 +52,15 @@ class StreamingEngine {
                     StreamProtocol.WEBSOCKET -> {
                         wsClient.connect(config.targetIp, config.targetPort)
                         wsClient.connectionState.collect { _connectionState.value = it }
+                    }
+                }
+                
+                // Connect Camera Clients
+                if (config.cameraEnabled) {
+                    when (config.protocol) {
+                        StreamProtocol.UDP -> cameraUdpClient.connect(config.targetIp, config.cameraPort)
+                        StreamProtocol.TCP -> cameraTcpClient.connect(config.targetIp, config.cameraPort)
+                        StreamProtocol.WEBSOCKET -> cameraWsClient.connect(config.targetIp, config.cameraPort)
                     }
                 }
             } else {
@@ -61,7 +76,24 @@ class StreamingEngine {
         udpClient.disconnect()
         tcpClient.disconnect()
         wsClient.disconnect()
+        
+        cameraUdpClient.disconnect()
+        cameraTcpClient.disconnect()
+        cameraWsClient.disconnect()
+        
         _connectionState.value = ConnectionState.Disconnected
+    }
+
+    suspend fun streamFrame(jpegBytes: ByteArray, config: StreamConfig) {
+        if (_connectionState.value != ConnectionState.Connected || !config.cameraEnabled) return
+        
+        if (config.streamMode == StreamMode.NETWORK_ONLY || config.streamMode == StreamMode.NETWORK_AND_FILE) {
+            when (config.protocol) {
+                StreamProtocol.UDP -> cameraUdpClient.send(jpegBytes)
+                StreamProtocol.TCP -> cameraTcpClient.send(jpegBytes)
+                StreamProtocol.WEBSOCKET -> cameraWsClient.send(jpegBytes)
+            }
+        }
     }
 
     suspend fun streamSnapshot(snapshot: SensorSnapshot, config: StreamConfig) {

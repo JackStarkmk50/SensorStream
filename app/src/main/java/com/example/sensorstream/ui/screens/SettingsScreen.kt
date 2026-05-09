@@ -126,6 +126,66 @@ fun SettingsScreen(viewModel: SensorStreamViewModel) {
                     }
                 )
             }
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            
+            Text("Visual SLAM (Camera)", style = MaterialTheme.typography.titleLarge)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Enable Camera Stream")
+                Switch(
+                    checked = config.cameraEnabled,
+                    onCheckedChange = { isChecked ->
+                        viewModel.updateConfig(config.copy(cameraEnabled = isChecked))
+                    }
+                )
+            }
+
+            var cameraPort by remember { mutableStateOf(config.cameraPort.toString()) }
+            OutlinedTextField(
+                value = cameraPort,
+                onValueChange = { 
+                    cameraPort = it
+                    it.toIntOrNull()?.let { p ->
+                        viewModel.updateConfig(config.copy(cameraPort = p))
+                    }
+                },
+                label = { Text("Camera Target Port (default: 5556)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            var resExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = resExpanded,
+                onExpandedChange = { resExpanded = !resExpanded }
+            ) {
+                OutlinedTextField(
+                    value = config.cameraResolution.displayName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Camera Resolution") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resExpanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = resExpanded,
+                    onDismissRequest = { resExpanded = false }
+                ) {
+                    com.example.sensorstream.data.model.CameraResolution.values().forEach { res ->
+                        DropdownMenuItem(
+                            text = { Text(res.displayName) },
+                            onClick = {
+                                viewModel.updateConfig(config.copy(cameraResolution = res))
+                                resExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -48,6 +48,7 @@ dependencies {
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("androidx.lifecycle:lifecycle-service:2.7.0")
 
     // Compose
     implementation(libs.androidx.activity.compose)
@@ -69,6 +70,12 @@ dependencies {
     
     // Networking
     implementation(libs.okhttp)
+    
+    // CameraX
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     // Testing
     testImplementation(libs.junit)

@@ -29,6 +29,14 @@ enum class SensorRate(val delayUs: Int, val displayName: String, val approxHz: S
 }
 
 /**
+ * Camera Resolution Configuration
+ */
+enum class CameraResolution(val displayName: String) {
+    VGA("640x480 (Recommended for SLAM)"),
+    HD("1280x720 (High Bandwidth)")
+}
+
+/**
  * Complete streaming configuration.
  */
 data class StreamConfig(
@@ -43,6 +51,9 @@ data class StreamConfig(
         SensorType.MAGNETOMETER
     ),
     val gpsEnabled: Boolean = false,
+    val cameraEnabled: Boolean = false,
+    val cameraPort: Int = 5556,
+    val cameraResolution: CameraResolution = CameraResolution.VGA,
     val runInBackground: Boolean = false,
     val fileName: String = "sensorstream"
 )
