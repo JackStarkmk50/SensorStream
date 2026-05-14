@@ -43,15 +43,15 @@ class StreamingEngine {
                 when (config.protocol) {
                     StreamProtocol.UDP -> {
                         udpClient.connect(config.targetIp, config.targetPort)
-                        udpClient.connectionState.collect { _connectionState.value = it }
+                        launch { udpClient.connectionState.collect { _connectionState.value = it } }
                     }
                     StreamProtocol.TCP -> {
                         tcpClient.connect(config.targetIp, config.targetPort)
-                        tcpClient.connectionState.collect { _connectionState.value = it }
+                        launch { tcpClient.connectionState.collect { _connectionState.value = it } }
                     }
                     StreamProtocol.WEBSOCKET -> {
                         wsClient.connect(config.targetIp, config.targetPort)
-                        wsClient.connectionState.collect { _connectionState.value = it }
+                        launch { wsClient.connectionState.collect { _connectionState.value = it } }
                     }
                 }
                 
