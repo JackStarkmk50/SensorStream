@@ -13,7 +13,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.example.sensorstream.data.model.CameraResolution
 import com.example.sensorstream.data.model.StreamConfig
+import androidx.camera.core.ImageProxy
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 
 class CameraDataSource {
@@ -26,7 +28,7 @@ class CameraDataSource {
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
         config: StreamConfig,
-        onFrameReady: (ByteArray) -> Unit
+        onFrameReady: (ByteArray, Long) -> Unit
     ) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
@@ -51,19 +53,21 @@ class CameraDataSource {
                 .build()
                 .also {
                     it.setAnalyzer(executor) { imageProxy ->
+                        val timestampNs = imageProxy.imageInfo.timestamp
                         try {
+                            // Offload heavy processing to Default dispatcher to prevent blocking
                             val bitmap = imageProxy.toBitmap()
                             
-                            // Compress Bitmap to JPEG
+                            // Compress Bitmap to JPEG - Lower quality for higher speed (45 is good for SLAM)
                             val outputStream = ByteArrayOutputStream()
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 45, outputStream)
                             val jpegBytes = outputStream.toByteArray()
                             
-                            // Emit the frame
-                            onFrameReady(jpegBytes)
+                            // Emit the frame with its hardware timestamp
+                            onFrameReady(jpegBytes, timestampNs)
                             
                         } catch (e: Exception) {
-                            Log.e("CameraDataSource", "Error compressing frame", e)
+                            Log.e("CameraDataSource", "Error processing frame", e)
                         } finally {
                             imageProxy.close()
                         }

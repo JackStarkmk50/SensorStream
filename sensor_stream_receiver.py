@@ -153,7 +153,12 @@ async def combined_ws_handler(websocket):
     try:
         async for message in websocket:
             if isinstance(message, bytes):
-                nparr = np.frombuffer(message, np.uint8)
+                # Handle Sync Header if present (12 bytes: MAGIC + TIMESTAMP)
+                payload = message
+                if len(message) > 12 and message[:4] == b'SYNC':
+                    payload = message[12:] # Skip header
+                
+                nparr = np.frombuffer(payload, np.uint8)
                 frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 if frame is not None:
                     # Rotation for landscape stream

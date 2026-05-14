@@ -65,10 +65,10 @@ class SensorStreamViewModel(application: Application) : AndroidViewModel(applica
             lifecycleOwner,
             previewView,
             _streamConfig.value
-        ) { jpegBytes ->
+        ) { jpegBytes, timestampNs ->
             if (_isStreaming.value) {
                 viewModelScope.launch {
-                    streamingEngine.streamFrame(jpegBytes, _streamConfig.value)
+                    streamingEngine.streamFrame(jpegBytes, timestampNs, _streamConfig.value)
                 }
             }
         }

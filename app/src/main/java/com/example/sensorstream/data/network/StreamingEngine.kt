@@ -84,14 +84,23 @@ class StreamingEngine {
         _connectionState.value = ConnectionState.Disconnected
     }
 
-    suspend fun streamFrame(jpegBytes: ByteArray, config: StreamConfig) {
+    private val SYNC_MAGIC = 0x53594E43 // 'SYNC' in ASCII
+
+    suspend fun streamFrame(jpegBytes: ByteArray, timestampNs: Long, config: StreamConfig) {
         if (_connectionState.value != ConnectionState.Connected || !config.cameraEnabled) return
         
+        // Wrap frame in a sync packet: [4 bytes Magic] [8 bytes Timestamp] [Payload]
+        val payload = java.nio.ByteBuffer.allocate(12 + jpegBytes.size).apply {
+            putInt(SYNC_MAGIC)
+            putLong(timestampNs)
+            put(jpegBytes)
+        }.array()
+
         if (config.streamMode == StreamMode.NETWORK_ONLY || config.streamMode == StreamMode.NETWORK_AND_FILE) {
             when (config.protocol) {
-                StreamProtocol.UDP -> cameraUdpClient.send(jpegBytes)
-                StreamProtocol.TCP -> cameraTcpClient.send(jpegBytes)
-                StreamProtocol.WEBSOCKET -> cameraWsClient.send(jpegBytes)
+                StreamProtocol.UDP -> cameraUdpClient.send(payload)
+                StreamProtocol.TCP -> cameraTcpClient.send(payload)
+                StreamProtocol.WEBSOCKET -> cameraWsClient.send(payload)
             }
         }
     }
