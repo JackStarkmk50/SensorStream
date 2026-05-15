@@ -53,23 +53,52 @@ class SensorStreamRosNode(Node):
             
         self.thread.start()
 
+    def handle_fragment(self, data):
+        if not hasattr(self, 'fragments'):
+            self.fragments = {}
+        
+        try:
+            # Header: FRAG (4) + ID (4) + INDEX (2) + TOTAL (2) = 12 bytes
+            import struct
+            frame_id = struct.unpack(">I", data[4:8])[0]
+            index = struct.unpack(">H", data[8:10])[0]
+            total = struct.unpack(">H", data[10:12])[0]
+            payload = data[12:]
+            
+            if frame_id not in self.fragments:
+                self.fragments[frame_id] = {"chunks": {}, "total": total, "time": time.time()}
+            
+            self.fragments[frame_id]["chunks"][index] = payload
+            
+            if len(self.fragments[frame_id]["chunks"]) == total:
+                full_data = b"".join(self.fragments[frame_id]["chunks"][i] for i in range(total))
+                self.handle_binary(full_data)
+                del self.fragments[frame_id]
+                
+            # Cleanup
+            now = time.time()
+            for fid in list(self.fragments.keys()):
+                if now - self.fragments[fid]["time"] > 1.0:
+                    del self.fragments[fid]
+        except: pass
+
     def run_udp_server(self):
         import select
-        # Create two sockets: one for IMU, one for Camera
         imu_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         imu_sock.bind(("0.0.0.0", self.port))
-        
         cam_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        cam_sock.bind(("0.0.0.0", self.port + 1)) # Default 5556
+        cam_sock.bind(("0.0.0.0", self.port + 1))
         
         self.get_logger().info(f"📡 UDP Listening on ports {self.port} (IMU) and {self.port+1} (Camera)")
         
         while rclpy.ok():
-            # Use select to wait for data on either socket
             readable, _, _ = select.select([imu_sock, cam_sock], [], [], 0.1)
             for s in readable:
                 data, addr = s.recvfrom(65535)
-                self.handle_binary(data)
+                if data.startswith(b'FRAG'):
+                    self.handle_fragment(data)
+                else:
+                    self.handle_binary(data)
 
     def run_ws_server(self):
         loop = asyncio.new_event_loop()
